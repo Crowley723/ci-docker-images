@@ -31,7 +31,7 @@ jobs:
 
   build-maven-node:
     needs: changes
-    if: ${{ steps.changes.outputs.maven-node == 'true' || github.event_name == 'schedule' }}
+    if: ${{ needs.changes.outputs.maven-node == 'true' || github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     steps:
       - name: 'Harden Runner'
