@@ -18,6 +18,9 @@ RUN curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gp
     && apt-get install -y temurin-25-jdk \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y maven \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Node.js 25
 RUN curl -fsSL https://deb.nodesource.com/setup_25.x | bash - \
     && apt-get install -y nodejs \
