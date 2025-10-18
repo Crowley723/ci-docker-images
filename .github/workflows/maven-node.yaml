@@ -1,0 +1,107 @@
+name: Build CI Images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 2 * * 1'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      maven-node: ${{ steps.changes.outputs.maven-node }}
+      maven-integration: ${{ steps.changes.outputs.maven-integration }}
+    steps:
+      - name: 'Harden Runner'
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: 'audit'
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            maven-node:
+              - 'maven-node/**'
+            maven-postgres:
+              - 'maven-postgres/**'
+
+  build-maven-node:
+    needs: changes
+    if: ${{ steps.changes.outputs.maven-node == 'true' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Harden Runner'
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: 'audit'
+      - uses: actions/checkout@v4
+      - name: Extract Metadata
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        with:
+          images: ghcr.io/${{ github.repository }}/maven-node
+          tags: |
+            type=ref,event=branch
+            type=sha,format=long
+
+      - name: Login to Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Build and push maven-node
+        uses: docker/build-push-action@v5
+        with:
+          context: ./maven-node
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          sbom: true
+
+  build-maven-postgres:
+    needs: changes
+    if: false
+      #if: ${{ steps.changes.outputs.maven-postgres == 'true' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Harden Runner'
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: 'audit'
+      - uses: actions/checkout@v4
+      - name: Extract Metadata
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        with:
+          images: ghcr.io/${{ github.repository }}/maven-postgres
+          tags: |   
+            type=ref,event=branch
+            type=sha,format=long
+  
+      - name: Login to Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+          
+      - name: Build and push maven-postgres
+        uses: docker/build-push-action@v5
+        with:
+          context: ./maven-node
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}         
+          annotations: ${{ steps.meta.outputs.annotations }}
+          sbom: true
